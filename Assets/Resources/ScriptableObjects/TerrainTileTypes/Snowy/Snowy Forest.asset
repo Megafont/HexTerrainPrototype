@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Snowy Forest
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 1
+  TerrainType: 4
+  TileVisuals:
+  - {fileID: 11400000, guid: dc8f7e08bfc0b914e9673cf449d0b577, type: 2}
+  - {fileID: 11400000, guid: a5bd46e8948f4a744a2915b6a1ec3076, type: 2}
+  - {fileID: 11400000, guid: 8d93f16c782b4a24ab5b8347cb67dfc4, type: 2}
+  - {fileID: 11400000, guid: 6f5230a52148e92438c04883e9c3311c, type: 2}
+  - {fileID: 11400000, guid: 553b7b2bcbd1b524a888b08c79ad0b32, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 4
+    Weight: 1.25
+  - Climate: 1
+    TerrainType: 0
+    Weight: 1.25

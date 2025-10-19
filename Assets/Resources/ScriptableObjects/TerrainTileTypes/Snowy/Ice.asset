@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Ice
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 1
+  TerrainType: 5
+  TileVisuals:
+  - {fileID: 11400000, guid: c2c09e948c3c6044592d4dea4e76dfac, type: 2}
+  - {fileID: 11400000, guid: c22a5c7a940b9b34985f096e1c62a38b, type: 2}
+  - {fileID: 11400000, guid: f3d1d631ed5d1dc48ba70017515ad189, type: 2}
+  - {fileID: 11400000, guid: 1b5a599eda5b39f48a55caef29786414, type: 2}
+  - {fileID: 11400000, guid: 7f643bf3e4630a847b94d467233ec18b, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 5
+    Weight: 1.5
+  - Climate: 1
+    TerrainType: 0
+    Weight: 1.25

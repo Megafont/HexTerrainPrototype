@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Snowy Mountains
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 1
+  TerrainType: 8
+  TileVisuals:
+  - {fileID: 11400000, guid: f0a6d3380a825484fb04017d63ee2db1, type: 2}
+  - {fileID: 11400000, guid: 097804dae6fc2b54b9670f29bb7b14f4, type: 2}
+  - {fileID: 11400000, guid: 1811669ea9820494bb87bdba6035abec, type: 2}
+  - {fileID: 11400000, guid: dd46f3bd37cf6094887dd0ef22c6d9c5, type: 2}
+  - {fileID: 11400000, guid: a8c7d9996d8beab4ba06990b7b4a76d3, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 8
+    Weight: 1.5
+  - Climate: 0
+    TerrainType: 4
+    Weight: 1.25
+  - Climate: 1
+    TerrainType: 0
+    Weight: 1.25

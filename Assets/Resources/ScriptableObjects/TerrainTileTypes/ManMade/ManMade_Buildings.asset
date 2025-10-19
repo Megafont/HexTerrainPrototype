@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: ManMade_Buildings
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 2
+  TerrainType: 6
+  TileVisuals:
+  - {fileID: 11400000, guid: 0bdb6dea4b050ef40a51f96ada8e8547, type: 2}
+  - {fileID: 11400000, guid: 09c6fe0c24bd27c46bb6ce6271d27be5, type: 2}
+  - {fileID: 11400000, guid: 163546ec251fb0b4eab26aa13e8d0d1c, type: 2}
+  - {fileID: 11400000, guid: c022a4c8f30def8439553183b5ae153f, type: 2}
+  - {fileID: 11400000, guid: 7fb51bbb061f9b641a70c36cc21a1ea4, type: 2}
+  - {fileID: 11400000, guid: 0d5766237104bab42ac4fd656273d119, type: 2}
+  - {fileID: 11400000, guid: ef9c4afc56579a845a8b38d63101c842, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 6
+    Weight: 1.4
+  - Climate: 0
+    TerrainType: 7
+    Weight: 1.2
+  - Climate: 2
+    TerrainType: 0
+    Weight: 1.25

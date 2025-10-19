@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Forest
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 2
+  TerrainType: 4
+  TileVisuals:
+  - {fileID: 11400000, guid: eb2cc56b94c40f1458d50093a3d48a54, type: 2}
+  - {fileID: 11400000, guid: 9b4a95f4a3ee22b41a7e876821cd2257, type: 2}
+  - {fileID: 11400000, guid: 8d4e5c6ef4e333a47abb4cc5da31c25d, type: 2}
+  - {fileID: 11400000, guid: 141d007501ffffc4cb67d763452e736c, type: 2}
+  - {fileID: 11400000, guid: 8cde39d3805251d44af729cb7d8fbe3f, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 2
+    TerrainType: 0
+    Weight: 1.25
+  - Climate: 0
+    TerrainType: 4
+    Weight: 1.25

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Mountains
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 2
+  TerrainType: 8
+  TileVisuals:
+  - {fileID: 11400000, guid: 3d5db4ef5adff564381740e71b276241, type: 2}
+  - {fileID: 11400000, guid: fe9e444f2a624b54eabb4682a6e262a3, type: 2}
+  - {fileID: 11400000, guid: 9571c8838df7dfe449892518b066f029, type: 2}
+  - {fileID: 11400000, guid: 9119965761fbcd54ca558143e750d27d, type: 2}
+  - {fileID: 11400000, guid: 597f9202bb967b24f8692b4705b8649d, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 8
+    Weight: 1.25
+  - Climate: 2
+    TerrainType: 0
+    Weight: 1.25

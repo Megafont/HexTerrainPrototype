@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Snowy Plain
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 1
+  TerrainType: 10
+  TileVisuals:
+  - {fileID: 11400000, guid: c9e325c88c8d1f444a0e63fd33d17ee8, type: 2}
+  - {fileID: 11400000, guid: 2a529ef200f73994ebe2567c7489c310, type: 2}
+  - {fileID: 11400000, guid: 5433e2c18a0cb4a42837e4c72e17d710, type: 2}
+  - {fileID: 11400000, guid: 55162c4bd190ab549bde4f39e5d9b83a, type: 2}
+  - {fileID: 11400000, guid: 729f945e68feb5e43a8426a53ed5f38b, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 10
+    Weight: 1.25
+  - Climate: 1
+    TerrainType: 0
+    Weight: 1.25

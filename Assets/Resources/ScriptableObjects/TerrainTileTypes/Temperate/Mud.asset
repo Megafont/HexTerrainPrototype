@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
+  m_Name: Mud
+  m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
+  Climate: 2
+  TerrainType: 9
+  TileVisuals:
+  - {fileID: 11400000, guid: b00036f817468c44e887cfa5363aaf89, type: 2}
+  - {fileID: 11400000, guid: 89196d844e86d0c49a733a0def671bea, type: 2}
+  - {fileID: 11400000, guid: 1db5ee2a55aae0548922cff91aa5bd81, type: 2}
+  - {fileID: 11400000, guid: 9b03f1a070b830645b17e76c87422bb1, type: 2}
+  - {fileID: 11400000, guid: 04343364929c3c84cac8295b5bf2e585, type: 2}
+  TileVisualIndex: -1
+  NeighborGenerationRules:
+  - Climate: 0
+    TerrainType: 9
+    Weight: 1.25
+  - Climate: 2
+    TerrainType: 0
+    Weight: 1.25
