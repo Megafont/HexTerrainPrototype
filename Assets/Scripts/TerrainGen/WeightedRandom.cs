@@ -20,6 +20,7 @@ namespace HexTerrainPrototype
 
             // Draw a random number from 0 to the upper bound we just determined.
             float randomValue = Random.Range(0, totalWeight);
+
             
             // Determine which item was selected.
             foreach (WeightedItem<T> item in items)

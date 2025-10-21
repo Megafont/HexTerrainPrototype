@@ -34,5 +34,5 @@ MonoBehaviour:
   m_InstancedGameObject: {fileID: 0}
   m_Flags: 1
   m_ColliderType: 1
-  TileTypeData: {fileID: 11400000, guid: 7a71aa5673c86a240b64eef43b310246, type: 2}
+  TileTypeData: {fileID: 11400000, guid: 0d8c30aff92c2844ca90ed3b51b0e1fb, type: 2}
   _Rotation: {x: 0, y: 0, z: 0, w: 1}

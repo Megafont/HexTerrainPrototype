@@ -4,7 +4,7 @@ namespace HexTerrainPrototype.Data
 {
     public enum TerrainTypes
     {
-        Any = 0, // This is just used as a default value when a terrain type isn't selected yet.
+        None = 0, // This is just used as a default value when a terrain type isn't selected yet.
         Canyons,
         Drifts,
         Dunes,

@@ -72,8 +72,8 @@ namespace HexTerrainPrototype
         
         public static bool TileHasBeenGenerated(HexTile tile)
         {
-            return tile != null && 
-                   tile.TileTypeData != null;
+            Debug.Log($"{tile != null}    {(tile != null ? tile.TileTypeData != null : "false")}");
+            return tile != null;
         }
         
     }

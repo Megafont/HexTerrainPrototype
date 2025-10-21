@@ -65,7 +65,12 @@ namespace HexTerrainPrototype
         [Tooltip("The tile type for the first tile when the UseRandomFirstTileType option is disabled.")]
         [SerializeField]
         private TileTypeDataSO _FirstTileType;
+
+        [Space(10)] [Header("Terrain Generation Settings")]
         
+        [Tooltip("If the neighboring tiles contain duplicate terrain generation rules, this value will be added to boost the weight of that rule since we have a rule stacking on top of itself. This is to prevent the probablity from easily reaching 100%, which would effectively disable all following rules.")]
+        [SerializeField]
+        private float _StackedRuleBonus = 0.1f;
         
         
         [SerializeField]
@@ -89,12 +94,12 @@ namespace HexTerrainPrototype
         /// </summary>
         private Vector3Int[] _NeighborTileOffsets_FlatTop = new Vector3Int[]
         {
-            new Vector3Int( 1,  0, 0),  // NORTH
-            new Vector3Int( 0,  1, 0),  // NORTH_EAST
-            new Vector3Int(-1,  1, 0),  // SOUTH_EAST
-            new Vector3Int(-1,  0, 0),  // SOUTH
-            new Vector3Int(-1, -1, 0),  // SOUTH_WEST
-            new Vector3Int( 0, -1, 0)   // NORTH_WEST
+            new Vector3Int( 0,  1, 0),  // NORTH
+            new Vector3Int( 1,  0, 0),  // NORTH_EAST
+            new Vector3Int( 1, -1, 0),  // SOUTH_EAST
+            new Vector3Int( 0, -1, 0),  // SOUTH
+            new Vector3Int(-1,  0, 0),  // SOUTH_WEST
+            new Vector3Int(-1,  1, 0)   // NORTH_WEST
         };
 
         /// <summary>
@@ -114,11 +119,6 @@ namespace HexTerrainPrototype
         
         private Rect _HexMapBounds;
         private HexMapStyles _HexMapStyle;
-        
-        /// <summary>
-        /// This dictionary is used for selecting a random tile based on all tile type weights according to the rules of the neighboring tiles.
-        /// </summary>
-        private Dictionary<TileTypeDataSO, float> _TileTypeWeightsLookup;
 
         private List<Vector3Int> _NeighborTiles;
 
@@ -168,15 +168,12 @@ namespace HexTerrainPrototype
             TileTypeDataSO firstTileTypeData = _UseRandomFirstTileType ? TileTypesManager.GetTileTypeData(Random.Range(0, TileTypesManager.Count)) 
                                                                        : _FirstTileType;
             
-            Debug.Log($"FIRST TILE POS: {new Vector3Int(_FirstTileXPos, _FirstTileYPos)}    FIRST TILE TYPE: {firstTileTypeData.name}");
+            Debug.Log($"FIRST TILE POS: {_CurTilePos}    FIRST TILE TYPE: {firstTileTypeData.name}");
             
             // Set the sprite for this tile.
             _HexTileMap.SetTile(new Vector3Int(_FirstTileXPos, _FirstTileYPos), 
                                 firstTileTypeData.GetTileVisual());
-            
-            // Cache the first tile's position.
-            Vector3Int firstTilePos = _CurTilePos;
-            
+
             // Set the starting tile as the first tile to check the neighbors of to find more tiles that
             // need to be generated.
             nextTilesToCheck.Add(_CurTilePos);
@@ -196,14 +193,15 @@ namespace HexTerrainPrototype
                 {
                     // Find all neighbors of this tile that have not been generated yet.
                     // We are using a private member var here, so we don't create a new list every time we get the neighbor tiles of a given tile.
-                    List<Vector3Int> neighborTiles = GetAllNullNeighborTiles(curTilesToCheck[i]);
-                    if (neighborTiles == null || neighborTiles.Count <= 0)
+                    List<Vector3Int> nullNeighborTiles = GetAllNullNeighborTiles(curTilesToCheck[i]);
+                    if (nullNeighborTiles == null || nullNeighborTiles.Count <= 0)
                         continue;
                     
-                    for (int j = 0; j < neighborTiles.Count; j++)
+                    for (int j = 0; j < nullNeighborTiles.Count; j++)
                     {
                         // Get the position of the tile to generate.
-                        Vector3Int tileToGenPos = neighborTiles[j];
+                        Vector3Int tileToGenPos = nullNeighborTiles[j];
+                        
                         // Skip this tile if it is outside the bounds of the map.
                         if (!_HexMapBounds.Contains(tileToGenPos))
                             continue;
@@ -216,12 +214,8 @@ namespace HexTerrainPrototype
                         
                         // Determine the tile type of this tile.
                         TileTypeDataSO tileType = GenerateTile(tileToGenPos);
-                        Debug.Log($"TILE POS: {tileToGenPos}    TILE TYPE: {tileType.name}");
-                        
-                        // Store the tile type data in the tile.
-                        if (tileToGen != null)
-                            tileToGen.TileTypeData = tileType;
-                        
+                        Debug.Log($"TILE POS: {tileToGenPos}    TILE TYPE: {(tileType != null ? tileType.name : "NULL")}");
+
                         // Set the sprite of the tile.
                         _HexTileMap.SetTile(tileToGenPos, tileType.GetTileVisual());
 
@@ -246,94 +240,113 @@ namespace HexTerrainPrototype
 
         private TileTypeDataSO GenerateTile(Vector3Int tilePos)
         {
-            InitTileTypeWeightsLookup();
+            // Compile the list of terrain generation rules for this tile.
+            List<TerrainGenRule> tileGenRules = CompileGenerationRulesForTile(tilePos);     
             
+            // Now select a tile based on these rules.
+            return DrawRandomTile(tileGenRules);
+        }
+
+        private TileTypeDataSO DrawRandomTile(List<TerrainGenRule> tileGenRules)
+        {
+            
+            // Populate the weighted item list.
+            foreach (TerrainGenRule rule in tileGenRules)
+            {
+                rule.DEBUG_PrintRule();
+                
+                if (Random.Range(0f, 1f) <= rule.Probability);
+                {
+                    TileTypeDataSO tileTypeData = TileTypesManager.GetRandomTileOfType(rule.Climate, rule.TerrainType);
+                    if (tileTypeData != null)
+                        return tileTypeData;
+                }
+                
+            } // foreach TerrainGenRule
+
+            
+            return null;
+        }
+
+        private List<TerrainGenRule> CompileGenerationRulesForTile(Vector3Int tilePos)
+        {
+                        // Create a list to store the relevant terrain generation rules in.
+            List<TerrainGenRule> tileGenRules = new List<TerrainGenRule>();
+                
             // Get all neighboring tiles that are already generated.
             List<Vector3Int> generatedNeighbors = GetAllGeneratedNeighborTiles(tilePos);
+            Debug.Log("GEN COUNT: " + generatedNeighbors.Count);
             
-            
-            // Foreach each of those already existing neighbor tiles, apply its terrain generation rules to the tile type weights lookup.
+            // For each of those already existing neighbor tiles, apply its terrain generation rules to the tile type weights lookup.
             foreach (Vector3Int neighborPos in generatedNeighbors)
             {
                 // Get the tile at this position from the tile map.
                 HexTile neighborTile = (HexTile) _HexTileMap.GetTile(neighborPos);
-
+                
+                if (neighborTile == null)
+                    Debug.LogError($"{neighborPos}    neighborTile==NULL");
+                else if (neighborTile.TileTypeData == null)
+                    Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData==NULL");
+                else if (neighborTile.TileTypeData.NeighborGenerationRules == null)
+                    Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData.NeighborGenerationRules==NULL");
+                else if (neighborTile.TileTypeData.NeighborGenerationRules.Count == 0)
+                    Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData.NeighborGenerationRules.Count==0");
+                
                 // Iterate through each of its terrain generation rules for neighboring tiles.
                 foreach (TerrainGenRule rule in neighborTile.TileTypeData.NeighborGenerationRules)
                 {
-                    // Apply this terrain generation rule to all relevant tile types in the tile type weights lookup.
-                    for (int i = 0; i < TileTypesManager.Count; i++)
+                    
+                    // Check if this rule already exists the rules list we're building for the tile we're generating.
+                    bool foundMatch = false;
+                    for (int i = 0; i < tileGenRules.Count; i++)
                     {
-                        // Get the next tile type from the manager
-                        TileTypeDataSO tileTypeData = TileTypesManager.GetTileTypeData(i);
+                        TerrainGenRule ruleInfo = tileGenRules[i];
+                        if (ruleInfo.IsMatch(rule))
+                        {
+                            foundMatch = true;
 
-                        
-                        // Next we need to check if we should apply this terrain gen rule's effects to this tile type in the tile type weights lookup dictionary.
-                        bool doApply = false;
-                        
-                        // Does this rule only apply to a certain climate?
-                        if (rule.TerrainType == TerrainTypes.Any && rule.Climate != Climates.Any)
-                        {
-                            if (tileTypeData.Climate == rule.Climate)
-                                doApply = true;
-                        }
-                        // Does this rule only apply to a certain terrain type?
-                        else if (rule.TerrainType != TerrainTypes.Any && rule.Climate == Climates.Any)
-                        {
-                            if (tileTypeData.TerrainType == rule.TerrainType)
-                                doApply = true;
-                        }
-                        // Does this rule apply to both a terrain type and a climate?
-                        else if (rule.TerrainType != TerrainTypes.Any && rule.Climate != Climates.Any)
-                        {
-                            if (tileTypeData.TerrainType == rule.TerrainType && tileTypeData.Climate == rule.Climate)
-                                doApply = true;
-                        }
-                        // If we get here, it means rule.TerrainType and rule.Climate are both set to None.
-                        else
-                        {
-                            Debug.LogWarning($"TileTypeDataSO for tile type {tileTypeData.name} contains a rule that applies to nothing since Terrain Type and Climate are both set to \"None\"!");
+                            if (rule.Probability > 0)
+                                ruleInfo.Probability = Mathf.Clamp(ruleInfo.Probability + _StackedRuleBonus, 0f, 1f);
+                            else if (rule.Probability == 0)
+                                ruleInfo.Probability = 0;
+                            
+                            if (rule.Probability != 0)
+                                tileGenRules[i] = ruleInfo; // We have to copy the whole object back into the list since it is a struct.
+                            
+                            break;
                         }
                         
-                        
-                        // Apply the effects of this rule if needed.                        
-                        if (doApply)
-                            _TileTypeWeightsLookup[tileTypeData] *= rule.Weight;
+                    } // end for i
 
-                         
-                    } // for int i
+                    if (!foundMatch)
+                    {
+                        tileGenRules.Add(new TerrainGenRule(rule));
+                    }
+                    
                     
                 } // foreach terrain gen rule
                 
             } // foreach neighbor tile
             
             
+            // Now that we've compiled a list of terrain generation rules for this tile based on all neighboring tiles that are already generated,
+            // we will sort the list by probability from highest to lowest. We can just use Sort() here, because the TerrainGenRuleInfos implement IComparable<TerrainGenRuleInfo>.
+            tileGenRules.Sort();
             
-            return DrawRandomTile();
-        }
-
-        private TileTypeDataSO DrawRandomTile()
-        {
-            // Create a weighted items list to pass into the WeightedRandom.Draw() function.
-            List<WeightedItem<TileTypeDataSO>> tileTypeDataList = new List<WeightedItem<TileTypeDataSO>>();
-
-            // Populate the weighted item list.
-            for (int i = 0; i < TileTypesManager.Count; i++)
+            // Remove any entries that have a probability of <= 0.
+            for (int i = tileGenRules.Count - 1; i >= 0; i--)
             {
-                tileTypeDataList.Add(new WeightedItem<TileTypeDataSO>() { Item = TileTypesManager.GetTileTypeData(i), 
-                                                                          Weight = _TileTypeWeightsLookup[TileTypesManager.GetTileTypeData(i)] });
-            } // for int i
+                if (tileGenRules[i].Probability <= 0)
+                    tileGenRules.RemoveAt(i);
+                
+            } // end for i
 
 
-            bool result = WeightedRandom.Draw(tileTypeDataList, out TileTypeDataSO selectedItem);
-            return result ? selectedItem : null;
+            return tileGenRules;
         }
         
         private void InitializeTerrainGeneration()
         {
-            _TileTypeWeightsLookup = new Dictionary<TileTypeDataSO, float>();
-            
-            
             // Seed the random number generator.
             Random.InitState(_UseTimeAsSeed ? (int) DateTime.Now.TimeOfDay.Ticks
                                             : _Seed);
@@ -363,21 +376,7 @@ namespace HexTerrainPrototype
                                                                        Mathf.Clamp(_FirstTileYPos, 0, _HexTileMapHeight),
                                                                        0);
         }
-        
-        /// <summary>
-        /// Initializes the tile type weights lookup dictionary, by adding every tile type with a weight of 1f to start with.
-        /// </summary>
-        private void InitTileTypeWeightsLookup()
-        {
-            _TileTypeWeightsLookup.Clear();
-            
-            for (int i = 0; i < TileTypesManager.Count; i++)
-            {
-                TileTypeDataSO tileTypeData = TileTypesManager.GetTileTypeData(i);
-                _TileTypeWeightsLookup.Add(tileTypeData, 1f);
-            }
-        }
-        
+
         /// <summary>
         /// Returns a list of all neighboring tiles for the given tile position.
         /// </summary>
@@ -391,7 +390,7 @@ namespace HexTerrainPrototype
             for (int i = 0; i < _NeighborTileOffsets.Length; i++)
             {
                 Vector3Int nextNeighborCoord = curTilePos + _NeighborTileOffsets[i];
-
+                
                 // If this tile position is outside the bounds of the map, skip it.
                 if (!_HexMapBounds.Contains(nextNeighborCoord))
                     continue;
@@ -433,10 +432,13 @@ namespace HexTerrainPrototype
                 if (!_HexMapBounds.Contains(nextNeighborCoord))
                     continue;
                 
-                
-                HexTile tile = (HexTile)_HexTileMap.GetTile(nextNeighborCoord);
+                Debug.Log("IN BOUNDS");
+                HexTile tile = (HexTile) _HexTileMap.GetTile(nextNeighborCoord);
 
-                if (HexUtils.TileHasBeenGenerated(tile))
+                bool isGenerated = HexUtils.TileHasBeenGenerated(tile);
+                Debug.Log($"CHECKING NEIGHBOR: {curTilePos} + {_NeighborTileOffsets[i]} = {nextNeighborCoord}    {isGenerated}");
+
+                if (isGenerated)
                     neighborTilesList.Add(nextNeighborCoord);                            
 
             } // end for i
@@ -458,7 +460,7 @@ namespace HexTerrainPrototype
             for (int i = 0; i < _NeighborTileOffsets.Length; i++)
             {
                 Vector3Int nextNeighborCoord = curTilePos + _NeighborTileOffsets[i];
-                
+
                 // If this tile position is outside the bounds of the map, skip it.
                 if (!_HexMapBounds.Contains(nextNeighborCoord))
                     continue;
@@ -466,13 +468,17 @@ namespace HexTerrainPrototype
                 
                 HexTile tile = (HexTile)_HexTileMap.GetTile(nextNeighborCoord);
 
-                if (!HexUtils.TileHasBeenGenerated(tile))
+                bool isGenerated = HexUtils.TileHasBeenGenerated(tile);
+                Debug.Log($"< CHECKING NEIGHBOR: {curTilePos} + {_NeighborTileOffsets[i]} = {nextNeighborCoord}    {!isGenerated}");
+                
+                if (!isGenerated)
                     neighborTilesList.Add(nextNeighborCoord);                            
 
             } // end for i
 
         
             return neighborTilesList;
-        }    
+        }
+
     }
 }

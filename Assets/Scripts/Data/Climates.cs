@@ -7,7 +7,7 @@ namespace HexTerrainPrototype.Data
     /// </summary>
     public enum Climates
     {
-        Any = 0, // This is just used as a default value when a climate isn't selected yet.
+        None = 0, // This is just used as a default value when a climate isn't selected yet.
         Snowy,
         Temperate,
         Tropical,
