@@ -24,10 +24,10 @@ MonoBehaviour:
   NeighborGenerationRules:
   - Climate: 0
     TerrainType: 6
-    Weight: 1.2
+    Probability: 0.2
   - Climate: 0
     TerrainType: 7
-    Weight: 1.4
+    Probability: 0.4
   - Climate: 2
     TerrainType: 0
-    Weight: 1.25
+    Probability: 0.25

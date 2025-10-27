@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using HexTerrainPrototype.Data;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -9,24 +11,43 @@ using Random = UnityEngine.Random;
 
 namespace HexTerrainPrototype
 {
+    /// <summary>
+    /// This class generates a random hex terrain based on the tile type data (scriptable objects).
+    ///
+    /// *** IMPORTANT ***
+    /// If the tiles are rotated the wrong way, you probably need to turn off the RotateTiles90Degrees debug option, and/or make sure
+    /// the HexTileMap field is set to the correct tile map for the type of tiles you're using.
+    /// </summary>
     public class HexTerrainGenerator : MonoBehaviour
     {
         [Header("General")]
-        
-        [Tooltip("The tile map to generate the random terrain in.")]
+
+        [Tooltip("The style of hex tilemap to generate.")]
         [SerializeField]
-        private Tilemap _HexTileMap;
+        private HexMapStyles _HexMapStyle;
         
-        [Tooltip("The width of the tilemap to be generated.")]
+        [Tooltip("The width of the hex tilemap to be generated.")]
         [SerializeField]
         [Min(1)]
         private int _HexTileMapWidth;
 
-        [Tooltip("The height of the tilemap to be generated.")]
+        [Tooltip("The height of the hex tilemap to be generated.")]
         [SerializeField]
         [Min(1)]
         private int _HexTileMapHeight;
 
+        [Tooltip("If enabled, the tilemap will be centered on the origin. This means that an 11x11 map would have tile coordinates ranging from (-5,-5) to (5, 5) rather than from (0,0) to (10,10).")]
+        [SerializeField]
+        private bool _CenterMapOnOrigin = false;
+
+        [Tooltip("The flat-top tile map.")]
+        [SerializeField]
+        private Tilemap _HexTileMap_FlatTop;
+
+        [Tooltip("The pointy-top tile map.")]
+        [SerializeField]
+        private Tilemap _HexTileMap_PointyTop;
+        
         
         [Header("Seed Settings")]
         
@@ -46,12 +67,12 @@ namespace HexTerrainPrototype
         [SerializeField]
         private bool _UseRandomFirstTilePosition;
         
-        [Tooltip("The X position for the first tile when the UseRandomFirstTilePosition option is disabled.")]
+        [Tooltip("The X position for the first tile to generate when the UseRandomFirstTilePosition option is disabled. After this tile is generated, it's neighbors will generated in clockwise order starting from the north or northeast neighbor depending on the tile map style. Then it will do the same for the neighbors of each of those tiles, and repeat until the map is done.")]
         [SerializeField]
         [Min(0)]
         private int _FirstTileXPos;
 
-        [Tooltip("The Y position for the first tile when the UseRandomFirstTilePosition option is disabled.")]
+        [Tooltip("The Y position for the first tile to generate when the UseRandomFirstTilePosition option is disabled. After this tile is generated, it's neighbors will generated in clockwise order starting from the north or northeast neighbor depending on the tile map style. Then it will do the same for the neighbors of each of those tiles, and repeat until the map is done.")]
         [SerializeField]
         [Min(0)]
         private int _FirstTileYPos;
@@ -62,63 +83,65 @@ namespace HexTerrainPrototype
         [SerializeField]
         private bool _UseRandomFirstTileType = true;
         
-        [Tooltip("The tile type for the first tile when the UseRandomFirstTileType option is disabled.")]
+        [Tooltip("The tile type to use for the first tile when the UseRandomFirstTileType option is disabled.")]
         [SerializeField]
         private TileTypeDataSO _FirstTileType;
 
-        [Space(10)] [Header("Terrain Generation Settings")]
+        [FormerlySerializedAs("_StackedRuleBonus")]
+        [Space(10)] 
         
-        [Tooltip("If the neighboring tiles contain duplicate terrain generation rules, this value will be added to boost the weight of that rule since we have a rule stacking on top of itself. This is to prevent the probablity from easily reaching 100%, which would effectively disable all following rules.")]
+        [Header("Terrain Generation Settings")]
+        
+        [Tooltip("If the neighboring tiles contain duplicate terrain generation rules, this value will be added to boost the weight of that rule since we have a rule stacking on top of itself. This value is a percentage in the range 0f-1f. It is used to prevent the selection probablity of a given tile type from easily reaching 100%, which would effectively disable all following rules and generate a map that is almost entirely temperate, snowy, or arid.")]
         [SerializeField]
-        private float _StackedRuleBonus = 0.1f;
-        
-        
-        [SerializeField]
-        private HexTile _GrassTile;
-        
-        [SerializeField]
-        private HexTile _MountainTile;
+        [Range(0, 1)]
+        private float _StackedRuleProbabilityBonus = 0.025f;
 
+        [Space(10)] 
+        
+        [Header("Debug Settings")] 
+
+        /*
+        [Tooltip("When enabled, the tiles are rotated 90 degrees when placed to allow testing of pointy-top hex tilemaps with the flat-top placeholder tile set.")]
+        [SerializeField]
+        private bool _RotateTiles90Degrees = false;
+    
+        [Space(10)]
+        */
+        
+        [Tooltip("If enabled, debug text will be displayed for each tile.")]
+        [SerializeField]
+        private bool _EnableTileDebugText;
+        
+        [Tooltip("This is the object all tile debug text objects will be parented to.")]
+        [SerializeField]
+        private Transform _TileDebugTextsParent;
+        
+        [Tooltip("The prefab to use for tile debug text.")]
+        [SerializeField]
+        private TextMeshPro _TileDebugTextPrefab;
+
+        [SerializeField]
+        private Color _FirstTileDebugTextColor = Color.red;
+        
+        [SerializeField]
+        private Color _TileDebugTextColor = Color.yellow;
+        
 
 
         /// <summary>
         /// Returns the total number of tiles in the tile map.
         /// </summary>
         public int TotalTiles => _HexTileMapWidth * _HexTileMapHeight;
-        
-        
-        
-        /// <summary>
-        /// These are the hex coordinate offsets for each neighbor tile of a given tile (when using flat-top hex tiles).
-        /// NOTE: We're using 3D coordinates since Unity's Tilemap component does so, since the Z-component can be used for a height value for example.
-        /// </summary>
-        private Vector3Int[] _NeighborTileOffsets_FlatTop = new Vector3Int[]
-        {
-            new Vector3Int( 0,  1, 0),  // NORTH
-            new Vector3Int( 1,  0, 0),  // NORTH_EAST
-            new Vector3Int( 1, -1, 0),  // SOUTH_EAST
-            new Vector3Int( 0, -1, 0),  // SOUTH
-            new Vector3Int(-1,  0, 0),  // SOUTH_WEST
-            new Vector3Int(-1,  1, 0)   // NORTH_WEST
-        };
 
-        /// <summary>
-        /// These are the hex coordinate offsets for each neighbor tile of a given tile (when using pointy-top hex tiles).
-        /// NOTE: We're using 3D coordinates since Unity's Tilemap component does so, since the Z-component can be used for a height value for example.
-        /// </summary>
-        private Vector3Int[] _NeighborTileOffsets_PointyTop = new Vector3Int[]
-        {
-            new Vector3Int( 0,  1, 0),  // NORTH_EAST
-            new Vector3Int( 1,  0, 0),  // EAST
-            new Vector3Int( 1, -1, 0),  // SOUTH_EAST
-            new Vector3Int( 0, -1, 0),  // SOUTH_WEST
-            new Vector3Int(-1, -1, 0),  // WEST
-            new Vector3Int(-1,  0, 0)   // NORTH_WEST
-        };        
+        
+        private Tilemap _HexTileMap;
+        
+        private int _TileNum = 0;
+        private List<TextMeshPro> _TileDebugTextList = new List<TextMeshPro>();
 
         
         private Rect _HexMapBounds;
-        private HexMapStyles _HexMapStyle;
 
         private List<Vector3Int> _NeighborTiles;
 
@@ -127,11 +150,6 @@ namespace HexTerrainPrototype
         /// NOTE: We're using 3D coordinates since Unity's Tilemap component does so, since the Z-component can be used for a height value for example.
         /// </summary>
         private Vector3Int _CurTilePos;
-
-        /// <summary>
-        /// This just holds a reference to whichever of the _NeighborTileOffsets_... arrays we are using. They are defined above.
-        /// </summary>
-        private Vector3Int[] _NeighborTileOffsets;
         
     
 
@@ -171,17 +189,19 @@ namespace HexTerrainPrototype
             Debug.Log($"FIRST TILE POS: {_CurTilePos}    FIRST TILE TYPE: {firstTileTypeData.name}");
             
             // Set the sprite for this tile.
-            _HexTileMap.SetTile(new Vector3Int(_FirstTileXPos, _FirstTileYPos), 
-                                firstTileTypeData.GetTileVisual());
-
+            PlaceTile(_CurTilePos,
+                      firstTileTypeData,
+                      true);
+            
+            
             // Set the starting tile as the first tile to check the neighbors of to find more tiles that
             // need to be generated.
             nextTilesToCheck.Add(_CurTilePos);
 
             tileCount++;
-            
 
-            
+
+            int rounds = 0;
             while (true)
             {
                 curTilesToCheck.Clear();
@@ -196,6 +216,7 @@ namespace HexTerrainPrototype
                     List<Vector3Int> nullNeighborTiles = GetAllNullNeighborTiles(curTilesToCheck[i]);
                     if (nullNeighborTiles == null || nullNeighborTiles.Count <= 0)
                         continue;
+
                     
                     for (int j = 0; j < nullNeighborTiles.Count; j++)
                     {
@@ -203,26 +224,25 @@ namespace HexTerrainPrototype
                         Vector3Int tileToGenPos = nullNeighborTiles[j];
                         
                         // Skip this tile if it is outside the bounds of the map.
-                        if (!_HexMapBounds.Contains(tileToGenPos))
+                        if (!TileIsInBounds(tileToGenPos))
                             continue;
                         
-                        // Add this tile to the list of tiles to check on the next iteration of this loop.
-                        nextTilesToCheck.Add(tileToGenPos);
                         
                         // Get the actual tile at that position in the tilemap, if there is one.
                         HexTile tileToGen = (HexTile) _HexTileMap.GetTile(tileToGenPos);
+                        
+                        // If this tile has already been generated, then do not add it into the list of tiles to check, as it has already had its neighbors checked.
+                        if (!HexUtils.TileHasBeenGenerated(tileToGen))
+                            nextTilesToCheck.Add(tileToGenPos);
                         
                         // Determine the tile type of this tile.
                         TileTypeDataSO tileType = GenerateTile(tileToGenPos);
                         Debug.Log($"TILE POS: {tileToGenPos}    TILE TYPE: {(tileType != null ? tileType.name : "NULL")}");
 
                         // Set the sprite of the tile.
-                        _HexTileMap.SetTile(tileToGenPos, tileType.GetTileVisual());
-
+                        PlaceTile(tileToGenPos, tileType);
                         
                         tileCount++;
-                        
-                        Debug.Log("NEIGHBOR: " + tileToGenPos);
                         
                     } // end for j
                     
@@ -235,53 +255,114 @@ namespace HexTerrainPrototype
                 
             } // end while
             
-            Debug.Log($"Total tiles generated: {tileCount}");
+            Debug.Log($"TOTAL TILES GENERATED: {tileCount}");
         }
-
+        
         private TileTypeDataSO GenerateTile(Vector3Int tilePos)
         {
             // Compile the list of terrain generation rules for this tile.
-            List<TerrainGenRule> tileGenRules = CompileGenerationRulesForTile(tilePos);     
+            List<TerrainGenRule> tileGenRules = CompileGenerationRulesForTile(tilePos, out Climates climate);     
             
             // Now select a tile based on these rules.
-            return DrawRandomTile(tileGenRules);
+            TileTypeDataSO tileType = SelectRandomTile(tileGenRules, climate);
+            
+            return tileType;
+        }
+        
+        private void PlaceTile(Vector3Int tilePos, TileTypeDataSO tileType, bool isFirstTile = false)
+        {
+            // Set the sprite of the tile.
+            HexTile tileVisual = tileType.GetTileVisual();
+            
+            //if (_RotateTiles90Degrees)
+            //    tileVisual.Rotation = 90f;
+                        
+            _HexTileMap.SetTile(tilePos, tileVisual);
+                        
+            //if (_RotateTiles90Degrees) // Set the rotation back to 0 so it doesn't get saved as 90 degrees in the scriptable object. This is only an issue in the editor, and not in builds.
+            //    tileVisual.Rotation = 0f;
+
+            
+            if (_EnableTileDebugText)
+                SpawnTileDebugText(tilePos, tileType, isFirstTile);
+        }
+        
+        private void SpawnTileDebugText(Vector3Int tilePos, TileTypeDataSO tileTypeData, bool isFirstTile = false)
+        {
+            TextMeshPro tileDebugText = Instantiate(_TileDebugTextPrefab, tilePos, Quaternion.identity, _TileDebugTextsParent);
+            tileDebugText.transform.position = _HexTileMap.CellToWorld(tilePos);
+            tileDebugText.GetComponent<RectTransform>().sizeDelta = new Vector2(_HexTileMap.cellSize.x, _HexTileMap.cellSize.y);
+            
+            tileDebugText.text = $"#{_TileNum}\n{tilePos}\n{tileTypeData.name}";
+            
+            tileDebugText.color = isFirstTile ? _FirstTileDebugTextColor : _TileDebugTextColor;
+            
+            _TileNum++;
+            
+            _TileDebugTextList.Add(tileDebugText);
         }
 
-        private TileTypeDataSO DrawRandomTile(List<TerrainGenRule> tileGenRules)
+        /// <summary>
+        /// Draws a random tile based on the terrain generation rules from the all neighboring tiles that are already generated.
+        /// </summary>
+        /// <param name="tileGenRules">A list of the terrain generation rules from neighboring tiles.</param>
+        /// <param name="climate">The climate value to use for rules that don't have one.</param>
+        /// <returns>The selected tile type.</returns>
+        private TileTypeDataSO SelectRandomTile(List<TerrainGenRule> tileGenRules, Climates climate)
         {
+            climate = Climates.Temperate;
+            
             
             // Populate the weighted item list.
             foreach (TerrainGenRule rule in tileGenRules)
             {
-                rule.DEBUG_PrintRule();
+                //rule.DEBUG_PrintRule();
                 
-                if (Random.Range(0f, 1f) <= rule.Probability);
+                if (Random.Range(0f, 1f) <= rule.Probability)
                 {
-                    TileTypeDataSO tileTypeData = TileTypesManager.GetRandomTileOfType(rule.Climate, rule.TerrainType);
+                    TileTypeDataSO tileTypeData = TileTypesManager.GetRandomTileOfType(rule.Climate != Climates.None ? rule.Climate : climate, 
+                                                                                       rule.TerrainType);
                     if (tileTypeData != null)
                         return tileTypeData;
                 }
                 
             } // foreach TerrainGenRule
 
-            
-            return null;
+
+            // None of the rules generated a tile this time, so pick one randomly with an appropriate climate, but no required terrain type.
+            return TileTypesManager.GetRandomTileOfType(climate, TerrainTypes.None);
         }
 
-        private List<TerrainGenRule> CompileGenerationRulesForTile(Vector3Int tilePos)
+        private List<TerrainGenRule> CompileGenerationRulesForTile(Vector3Int tilePos, out Climates avgClimate)
         {
-                        // Create a list to store the relevant terrain generation rules in.
+            float climatesSum = 0;
+            Climates warmestClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Min();
+            Climates coldestClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Max();
+            
+            avgClimate = Climates.Temperate;
+
+            
+            // Create a list to store the relevant terrain generation rules in.
             List<TerrainGenRule> tileGenRules = new List<TerrainGenRule>();
                 
             // Get all neighboring tiles that are already generated.
             List<Vector3Int> generatedNeighbors = GetAllGeneratedNeighborTiles(tilePos);
-            Debug.Log("GEN COUNT: " + generatedNeighbors.Count);
+            //Debug.Log("GENERATED NEIGHBORS COUNT: " + generatedNeighbors.Count);
             
             // For each of those already existing neighbor tiles, apply its terrain generation rules to the tile type weights lookup.
             foreach (Vector3Int neighborPos in generatedNeighbors)
             {
                 // Get the tile at this position from the tile map.
                 HexTile neighborTile = (HexTile) _HexTileMap.GetTile(neighborPos);
+                
+                // Add the climate value to a running total. This will be turned into the average climate of the neighboring tiles, which we will use for rules that have no climate value.
+                Climates neighborClimate = neighborTile.TileTypeData.Climate;
+                if (neighborClimate > warmestClimate)
+                    warmestClimate = neighborClimate;
+                if (neighborClimate < coldestClimate)
+                    coldestClimate = neighborClimate;
+                climatesSum += (float) neighborClimate;
+                
                 
                 if (neighborTile == null)
                     Debug.LogError($"{neighborPos}    neighborTile==NULL");
@@ -291,6 +372,7 @@ namespace HexTerrainPrototype
                     Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData.NeighborGenerationRules==NULL");
                 else if (neighborTile.TileTypeData.NeighborGenerationRules.Count == 0)
                     Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData.NeighborGenerationRules.Count==0");
+                
                 
                 // Iterate through each of its terrain generation rules for neighboring tiles.
                 foreach (TerrainGenRule rule in neighborTile.TileTypeData.NeighborGenerationRules)
@@ -306,7 +388,7 @@ namespace HexTerrainPrototype
                             foundMatch = true;
 
                             if (rule.Probability > 0)
-                                ruleInfo.Probability = Mathf.Clamp(ruleInfo.Probability + _StackedRuleBonus, 0f, 1f);
+                                ruleInfo.Probability = Mathf.Clamp(ruleInfo.Probability + _StackedRuleProbabilityBonus, 0f, 1f);
                             else if (rule.Probability == 0)
                                 ruleInfo.Probability = 0;
                             
@@ -342,6 +424,15 @@ namespace HexTerrainPrototype
             } // end for i
 
 
+            // Convert the sum of the climate values of all neighbor tiles into an average.
+            avgClimate = (Climates) Mathf.RoundToInt(climatesSum / generatedNeighbors.Count);
+            
+            if (coldestClimate == Climates.Snowy)
+                avgClimate = coldestClimate;
+            else if (warmestClimate == Climates.Arid)
+                avgClimate = warmestClimate;
+            
+            Debug.Log($"GENERATING TILE:    {tilePos}    ColdestNeighbor: {coldestClimate}    WarmestNeighbor: {warmestClimate}    AvgNeighbor: {avgClimate}");
             return tileGenRules;
         }
         
@@ -351,30 +442,53 @@ namespace HexTerrainPrototype
             Random.InitState(_UseTimeAsSeed ? (int) DateTime.Now.TimeOfDay.Ticks
                                             : _Seed);
             
-            // Determine which type of hex map this is.
-            _HexMapStyle = HexUtils.GetHexMapStyle(_HexTileMap);
-            //Debug.Log("STYLE: " + _HexMapStyle);
+            // Set our reference to the tilemap with the specified style.
+            // This way all the code will just use whichever one is appropriate.
+            _HexTileMap = _HexMapStyle == HexMapStyles.FLAT_TOP ? _HexTileMap_FlatTop 
+                                                                : _HexTileMap_PointyTop;
             
-            // Determine which neighbor cell offsets array we need to use.
-            // If the tiles are wider than they are tall, then we know this is a flat-top hex grid. Otherwise it's a pointy-top hex grid.
-            _NeighborTileOffsets = _HexMapStyle == HexMapStyles.FLAT_TOP ? _NeighborTileOffsets_FlatTop
-                                                                         : _NeighborTileOffsets_PointyTop;
+            // Enable the appropriate hex tilemap, and disable the other one.
+            _HexTileMap_FlatTop.gameObject.SetActive(_HexMapStyle == HexMapStyles.FLAT_TOP);
+            _HexTileMap_PointyTop.gameObject.SetActive(_HexMapStyle == HexMapStyles.POINTY_TOP);
+            
             
             // Determine the bounds of the tilemap based on the size settings.
             // First, check the width and height. If they are even, just make them odd by subtracting 1. This way we always have an even number of tiles left/right and above/below the origin tile (0,0,0).
-            int width = _HexTileMapWidth % 2 == 0 ? _HexTileMapWidth - 1 : _HexTileMapWidth;
-            int height = _HexTileMapHeight % 2 == 0 ? _HexTileMapHeight - 1 : _HexTileMapHeight;
-            int halfWidth = width / 2;
-            int halfHeight = height / 2;
-            _HexMapBounds = new Rect(-halfWidth, -halfHeight, width, height);
+            if (_CenterMapOnOrigin)
+            {
+                int width = _HexTileMapWidth % 2 == 0 ? _HexTileMapWidth - 1 : _HexTileMapWidth;
+                int height = _HexTileMapHeight % 2 == 0 ? _HexTileMapHeight - 1 : _HexTileMapHeight;
+                int halfWidth = width / 2;
+                int halfHeight = height / 2;
+                _HexMapBounds = new Rect(-halfWidth, -halfHeight, width, height);
+
+                //_HexTileMap.transform.position = new Vector3(_HexGridWidth / 2f, _HexGridHeight / 2f, 0);
+
+                // Determine the starting tile position.
+                // If the UserRandomFirstTilePosition option is enabled, select a random starting tile position.
+                // Otherwise, use the FirstTileXPos and FirstTileYPos settings.
+                _CurTilePos = _UseRandomFirstTilePosition ? HexUtils.GetRandomTileCoord(-halfWidth, halfWidth - 1, -halfHeight, halfHeight - 1)
+                                                          : new Vector3Int(Mathf.Clamp(_FirstTileXPos, 0, _HexTileMapWidth - 1), 
+                                                                           Mathf.Clamp(_FirstTileYPos, 0, _HexTileMapHeight - 1),
+                                                                           0);
+            }
+            else
+            {
+                // _CenterMapOnOrigin is off, so the origin cell will be at the lower-left corner of the map rather than in the center.
+                _HexMapBounds = new Rect(0, 0, _HexTileMapWidth, _HexTileMapHeight);
+                
+                // Determine the starting tile position.
+                // If the UserRandomFirstTilePosition option is enabled, select a random starting tile position.
+                // Otherwise, use the FirstTileXPos and FirstTileYPos settings.
+                _CurTilePos = _UseRandomFirstTilePosition ? HexUtils.GetRandomTileCoord(0, _HexTileMapWidth - 1, 0, _HexTileMapHeight - 1)
+                                                          : new Vector3Int(Mathf.Clamp(_FirstTileXPos, 0, _HexTileMapWidth - 1), 
+                                                                           Mathf.Clamp(_FirstTileYPos, 0, _HexTileMapHeight - 1),
+                                                                           0);                
+            }
             
-            // Determine the starting tile position.
-            // If the UserRandomFirstTilePosition option is enabled, select a random starting tile position.
-            // Otherwise, use the FirstTileXPos and FirstTileYPos settings.
-            _CurTilePos = _UseRandomFirstTilePosition ? HexUtils.GetRandomTileCoord(-halfWidth, halfWidth, -halfHeight, halfHeight)
-                                                      : new Vector3Int(Mathf.Clamp(_FirstTileXPos, 0, _HexTileMapWidth), 
-                                                                       Mathf.Clamp(_FirstTileYPos, 0, _HexTileMapHeight),
-                                                                       0);
+            
+            if (!TileIsInBounds(_CurTilePos))
+                throw new Exception($"The starting tile position {_CurTilePos} is outside the bounds of the map: ({_HexMapBounds.xMin},{_HexMapBounds.xMax}) to ({_HexMapBounds.yMin},{_HexMapBounds.yMax})! Change it in the inspector, or enable the UseRandomFirstTilePosition option there.");
         }
 
         /// <summary>
@@ -387,9 +501,10 @@ namespace HexTerrainPrototype
             List<Vector3Int> neighborTilesList = new List<Vector3Int>();
             
         
-            for (int i = 0; i < _NeighborTileOffsets.Length; i++)
+            for (int i = 0; i < 6; i++)
             {
-                Vector3Int nextNeighborCoord = curTilePos + _NeighborTileOffsets[i];
+                Vector3Int nextNeighborCoord = _HexMapStyle == HexMapStyles.FLAT_TOP ? HexDirections.GetNeighborPos_FlatTop(curTilePos, (HexDirections.Directions_FlatTop) i)
+                                                                                     : HexDirections.GetNeighborPos_PointyTop(curTilePos, (HexDirections.Directions_PointyTop) i);
                 
                 // If this tile position is outside the bounds of the map, skip it.
                 if (!_HexMapBounds.Contains(nextNeighborCoord))
@@ -397,8 +512,7 @@ namespace HexTerrainPrototype
                 
                 
                 // Check that this tile position is within the tilemap bounds. If not, then just skip it.
-                if (nextNeighborCoord.x < _HexMapBounds.xMin || nextNeighborCoord.x > _HexMapBounds.xMax ||
-                    nextNeighborCoord.y < _HexMapBounds.yMin || nextNeighborCoord.y > _HexMapBounds.yMax)
+                if (!TileIsInBounds(nextNeighborCoord))
                 {
                     continue;
                 }
@@ -424,19 +538,18 @@ namespace HexTerrainPrototype
             List<Vector3Int> neighborTilesList = new List<Vector3Int>();
             
         
-            for (int i = 0; i < _NeighborTileOffsets.Length; i++)
+            for (int i = 0; i < 6; i++)
             {
-                Vector3Int nextNeighborCoord = curTilePos + _NeighborTileOffsets[i];
+                Vector3Int nextNeighborCoord = _HexMapStyle == HexMapStyles.FLAT_TOP ? HexDirections.GetNeighborPos_FlatTop(curTilePos, (HexDirections.Directions_FlatTop) i)
+                                                                                     : HexDirections.GetNeighborPos_PointyTop(curTilePos, (HexDirections.Directions_PointyTop) i);
                 
                 // If this tile position is outside the bounds of the map, skip it.
                 if (!_HexMapBounds.Contains(nextNeighborCoord))
                     continue;
                 
-                Debug.Log("IN BOUNDS");
                 HexTile tile = (HexTile) _HexTileMap.GetTile(nextNeighborCoord);
 
                 bool isGenerated = HexUtils.TileHasBeenGenerated(tile);
-                Debug.Log($"CHECKING NEIGHBOR: {curTilePos} + {_NeighborTileOffsets[i]} = {nextNeighborCoord}    {isGenerated}");
 
                 if (isGenerated)
                     neighborTilesList.Add(nextNeighborCoord);                            
@@ -457,9 +570,10 @@ namespace HexTerrainPrototype
             List<Vector3Int> neighborTilesList = new List<Vector3Int>();
             
         
-            for (int i = 0; i < _NeighborTileOffsets.Length; i++)
+            for (int i = 0; i < 6; i++)
             {
-                Vector3Int nextNeighborCoord = curTilePos + _NeighborTileOffsets[i];
+                Vector3Int nextNeighborCoord = _HexMapStyle == HexMapStyles.FLAT_TOP ? HexDirections.GetNeighborPos_FlatTop(curTilePos, (HexDirections.Directions_FlatTop) i)
+                                                                                     : HexDirections.GetNeighborPos_PointyTop(curTilePos, (HexDirections.Directions_PointyTop) i);
 
                 // If this tile position is outside the bounds of the map, skip it.
                 if (!_HexMapBounds.Contains(nextNeighborCoord))
@@ -469,7 +583,6 @@ namespace HexTerrainPrototype
                 HexTile tile = (HexTile)_HexTileMap.GetTile(nextNeighborCoord);
 
                 bool isGenerated = HexUtils.TileHasBeenGenerated(tile);
-                Debug.Log($"< CHECKING NEIGHBOR: {curTilePos} + {_NeighborTileOffsets[i]} = {nextNeighborCoord}    {!isGenerated}");
                 
                 if (!isGenerated)
                     neighborTilesList.Add(nextNeighborCoord);                            
@@ -478,6 +591,12 @@ namespace HexTerrainPrototype
 
         
             return neighborTilesList;
+        }
+
+        public bool TileIsInBounds(Vector3Int tilePos)
+        {
+            return tilePos.x >= _HexMapBounds.xMin && tilePos.x <= _HexMapBounds.xMax &&
+                   tilePos.y >= _HexMapBounds.yMin && tilePos.y <= _HexMapBounds.yMax;
         }
 
     }

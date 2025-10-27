@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
   m_Name: Desert Plain
   m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
-  Climate: 1
-  TerrainType: 9
+  Climate: 4
+  TerrainType: 10
   TileVisuals:
   - {fileID: 11400000, guid: 03f3b19f571be034da89cdf699e06209, type: 2}
   - {fileID: 11400000, guid: 20fa99af2fc7b954a8870006814f4ccb, type: 2}
@@ -24,7 +24,7 @@ MonoBehaviour:
   NeighborGenerationRules:
   - Climate: 0
     TerrainType: 10
-    Weight: 1.25
+    Probability: 0.25
   - Climate: 4
     TerrainType: 0
-    Weight: 1.25
+    Probability: 0.25

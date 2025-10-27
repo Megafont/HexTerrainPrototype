@@ -23,11 +23,8 @@ MonoBehaviour:
   TileVisualIndex: -1
   NeighborGenerationRules:
   - Climate: 0
-    TerrainType: 1
-    Weight: 1.25
-  - Climate: 0
     TerrainType: 8
-    Weight: 1.4
+    Probability: 0.4
   - Climate: 4
     TerrainType: 0
-    Weight: 1.25
+    Probability: 0.25

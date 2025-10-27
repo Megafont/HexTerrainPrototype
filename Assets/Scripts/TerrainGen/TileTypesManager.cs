@@ -85,7 +85,19 @@ namespace HexTerrainPrototype
             List<TileTypeDataSO> tileTypes = new List<TileTypeDataSO>();
             tileTypes.AddRange(_TileTypesByClimateLookup[climate]);
             tileTypes.AddRange(_TileTypesByTerrainTypeLookup[terrainType]);
+            
+            if (climate == Climates.Arid || climate == Climates.Snowy)
+                tileTypes.AddRange(_TileTypesByClimateLookup[Climates.Temperate]);
+            
+            if (climate == Climates.Temperate)
+            {
+                tileTypes.AddRange(_TileTypesByClimateLookup[Climates.Arid]);
+                tileTypes.AddRange(_TileTypesByClimateLookup[Climates.Snowy]);
+            }
 
+            // AVOID DUPLICATE ENMTRIES IN tileTypes!!!
+            
+            int attempts = 0;
             while (true)
             {
                 TileTypeDataSO tileType = tileTypes[Random.Range(0, tileTypes.Count - 1)];
@@ -98,6 +110,13 @@ namespace HexTerrainPrototype
                 // Check that the randomly selected tile type is not more than one climate type away from the specified climate. This prevents a snowy tile from spawning next to a desert tile, for example.
                 if (diff >= -1 && diff <= 1)
                     return tileType;
+
+                attempts++;
+                if (attempts >= 100)
+                {
+                    Debug.LogError("Failed to pick a valid tile type after 100 attempts. The currently selected tile type will be used.");
+                    return tileType;
+                }
             }
         }
         
@@ -108,6 +127,9 @@ namespace HexTerrainPrototype
         /// <returns>A list of tiles of the specified climate type.</returns>
         public static List<TileTypeDataSO> GetTileTypesByClimate(Climates climate)
         {
+            if (climate == Climates.None)
+                return new List<TileTypeDataSO>();
+            
             return _TileTypesByClimateLookup[climate];
         }
         
@@ -118,6 +140,9 @@ namespace HexTerrainPrototype
         /// <returns>A list of tiles of the specified terrain type.</returns>
         public static List<TileTypeDataSO> GetTileTypesByTerrainType(TerrainTypes terrainType)
         {
+            if (terrainType == TerrainTypes.None)
+                return new List<TileTypeDataSO>();
+
             return _TileTypesByTerrainTypeLookup[terrainType];
         }
         

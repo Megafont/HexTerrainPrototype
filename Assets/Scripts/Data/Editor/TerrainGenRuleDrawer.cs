@@ -12,7 +12,7 @@ namespace HexTerrainPrototype.Data.Editor
         
         private const float _CLIMATE_LABEL_WIDTH = 55f;
         private const float _TERRAIN_TYPE_LABEL_WIDTH = 80f;
-        private const float _WEIGHT_LABEL_WIDTH = 50f;
+        private const float _PROBABILITY_LABEL_WIDTH = 70f;
         
         private const float _FIELD_WIDTH = 120f;
         private const float _INT_FIELD_WIDTH = 40f;
@@ -32,7 +32,7 @@ namespace HexTerrainPrototype.Data.Editor
 
             PropertyDrawerUtils.AddPropertyInHorizontalGroup(property, ref uiPosition, _CLIMATE_LABEL_WIDTH, "Climate:", _FIELD_WIDTH, "Climate", _SPACING);
             PropertyDrawerUtils.AddPropertyInHorizontalGroup(property, ref uiPosition, _TERRAIN_TYPE_LABEL_WIDTH, "Terrain Type:", _FIELD_WIDTH, "TerrainType", _SPACING);
-            PropertyDrawerUtils.AddPropertyInHorizontalGroup(property, ref uiPosition, _WEIGHT_LABEL_WIDTH, "Weight:", _INT_FIELD_WIDTH, "Weight", _SPACING);
+            PropertyDrawerUtils.AddPropertyInHorizontalGroup(property, ref uiPosition, _PROBABILITY_LABEL_WIDTH, "Probability:", _INT_FIELD_WIDTH, "Probability", _SPACING);
 
             EditorGUI.indentLevel = indent;
             

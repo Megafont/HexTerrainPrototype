@@ -1,5 +1,7 @@
+using System;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using Random = UnityEngine.Random;
 
 namespace HexTerrainPrototype
 {
@@ -23,6 +25,13 @@ namespace HexTerrainPrototype
                                   Random.Range(zMinInclusive, zMaxInclusive));
         }
         
+        /// <summary>
+        /// This utility function is an extension method for Vector3Int so you can call it directly on any Vector3Int variable.
+        /// It reorders the components of the vector based on the swizzle type.
+        /// </summary>
+        /// <param name="vector">The vector to reorder.</param>
+        /// <param name="swizzleType">The swizzle type.</param>
+        /// <returns></returns>
         public static Vector3Int Swizzle(this Vector3Int vector, SwizzleTypes swizzleType)
         {
             switch (swizzleType)
@@ -47,33 +56,28 @@ namespace HexTerrainPrototype
 
         public static HexMapStyles GetHexMapStyle(Tilemap tileMap)
         {
-            // Determine which type of hex map this is.
             // NOTE: This comparison looks backwards at first, but it needs to be that way due to how hex maps work.
-            return tileMap.cellSize.y > tileMap.cellSize.x ? HexMapStyles.FLAT_TOP
-                                                           : HexMapStyles.POINTY_TOP;
-        }
-
-        public static Vector2 HexToWorldCoord(Tilemap tileMap, Vector3Int hexCoord)
-        {
-            // TODO: IMPLEMENT THIS FUNCTION
-            return Vector2.zero;
-        }
-
-        public static Vector3Int WorldToHexCoord(Tilemap tileMap, Vector2 worldCoord)
-        {
-            // TODO: IMPLEMENT THIS FUNCTION
-            return Vector3Int.zero;
+            //return tileMap.cellSize.y > tileMap.cellSize.x ? HexMapStyles.FLAT_TOP
+            //                                               : HexMapStyles.POINTY_TOP;
+            
+            // Determine which type of hex map this is.
+            if (tileMap.cellSwizzle == GridLayout.CellSwizzle.YXZ)
+                return HexMapStyles.FLAT_TOP;
+            else if (tileMap.cellSwizzle == GridLayout.CellSwizzle.XYZ)
+                return HexMapStyles.POINTY_TOP;
+            else
+                throw new Exception("Cannot determine the style of this hex tile map! It has an unknown tile map style.");
         }
         
-        public static bool HexCoordIsInMapBounds(Tilemap tileMap, Vector3Int hexPos)
-        {
-            return false;
-        }
-        
+        /// <summary>
+        /// Checks if the specified tile has been generated or not.
+        /// </summary>
+        /// <param name="tile">The tile to check.</param>
+        /// <returns>True if this tile has already been generated.</returns>
         public static bool TileHasBeenGenerated(HexTile tile)
         {
-            Debug.Log($"{tile != null}    {(tile != null ? tile.TileTypeData != null : "false")}");
-            return tile != null;
+            //Debug.Log($"{tile != null}    {(tile != null ? tile.TileTypeData != null : "False")}");
+            return tile != null && tile.TileTypeData != null;
         }
         
     }
