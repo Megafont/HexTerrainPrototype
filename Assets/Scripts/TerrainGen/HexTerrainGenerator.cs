@@ -261,10 +261,21 @@ namespace HexTerrainPrototype
         private TileTypeDataSO GenerateTile(Vector3Int tilePos)
         {
             // Compile the list of terrain generation rules for this tile.
-            List<TerrainGenRule> tileGenRules = CompileGenerationRulesForTile(tilePos, out Climates climate);     
+            List<TerrainGenRule> tileGenRules = CompileGenerationRulesForTile(tilePos, out Climates coldestNeighborClimate, out Climates warmestNeighborClimate, out Climates avgClimate);     
             
-            // Now select a tile based on these rules.
-            TileTypeDataSO tileType = SelectRandomTile(tileGenRules, climate);
+            // Figure out the climate for this tile.
+            Climates climate = Climates.None;
+            // If this tile has both snowy and arid neighbors, then force the climate to be temperate.
+            /*
+            if (coldestNeighborClimate == Climates.Snowy && warmestNeighborClimate == Climates.Arid)
+                climate = Climates.Temperate;
+            else */
+                climate = avgClimate;
+            
+            Debug.Log($"CLIMATE:    Final: {climate}    Avg: {avgClimate}    Coldest: {coldestNeighborClimate}    Warmest: {warmestNeighborClimate}");
+            
+            // Determine the type of this tile.
+            TileTypeDataSO tileType = SelectRandomTile(tileGenRules, coldestNeighborClimate, warmestNeighborClimate, avgClimate);
             
             return tileType;
         }
@@ -308,9 +319,29 @@ namespace HexTerrainPrototype
         /// <param name="tileGenRules">A list of the terrain generation rules from neighboring tiles.</param>
         /// <param name="climate">The climate value to use for rules that don't have one.</param>
         /// <returns>The selected tile type.</returns>
-        private TileTypeDataSO SelectRandomTile(List<TerrainGenRule> tileGenRules, Climates climate)
+        private TileTypeDataSO SelectRandomTile(List<TerrainGenRule> tileGenRules,  Climates coldestNeighborClimate, Climates warmestNeighborClimate, Climates avgClimate)
         {
-            climate = Climates.Temperate;
+            /*
+            if (climate == Climates.None)
+            {
+                Debug.LogWarning("NONE!!!");
+                climate = Climates.Temperate;
+            }
+            */
+            
+            TileTypeDataSO tileTypeData = null;
+            
+            Climates reasonableClimate = Climates.Temperate;
+            Climates baseClimate = Climates.Temperate;
+            if (coldestNeighborClimate == warmestNeighborClimate)
+            {
+                baseClimate = coldestNeighborClimate;
+            }
+            reasonableClimate = (Climates)Random.Range(Mathf.Max((int) baseClimate - 1, 1), // The Max() function makes sure this value is not less than 1.
+                                                       Mathf.Min((int) baseClimate + 1, Enum.GetValues(typeof(Climates)).Length - 1)); // The Min() function makes sure this value is not greater than the last Climates enum value.
+            
+            if (coldestNeighborClimate == Climates.Snowy && warmestNeighborClimate == Climates.Arid)
+                reasonableClimate = Climates.Temperate;
             
             
             // Populate the weighted item list.
@@ -320,8 +351,8 @@ namespace HexTerrainPrototype
                 
                 if (Random.Range(0f, 1f) <= rule.Probability)
                 {
-                    TileTypeDataSO tileTypeData = TileTypesManager.GetRandomTileOfType(rule.Climate != Climates.None ? rule.Climate : climate, 
-                                                                                       rule.TerrainType);
+                    tileTypeData = TileTypesManager.GetRandomTileOfType(rule.Climate != Climates.None ? rule.Climate : reasonableClimate, 
+                                                                        rule.TerrainType);
                     if (tileTypeData != null)
                         return tileTypeData;
                 }
@@ -330,17 +361,27 @@ namespace HexTerrainPrototype
 
 
             // None of the rules generated a tile this time, so pick one randomly with an appropriate climate, but no required terrain type.
-            return TileTypesManager.GetRandomTileOfType(climate, TerrainTypes.None);
+            int attempts = 100;
+            for (int i = attempts; i > 0; i--)
+            {
+                
+                i--;
+                
+            } // end for i
+
+            
+            Debug.LogWarning($"Failed to select a valid tile after {attempts} attempts! The currently selected tile will be used so generation can continue.");
+            tileTypeData = TileTypesManager.GetRandomTileOfType(reasonableClimate, 
+                                                      TerrainTypes.None);
+            return tileTypeData;
         }
 
-        private List<TerrainGenRule> CompileGenerationRulesForTile(Vector3Int tilePos, out Climates avgClimate)
+        private List<TerrainGenRule> CompileGenerationRulesForTile(Vector3Int tilePos, out Climates coldestNeighborClimate, out Climates warmestNeighborClimate, out Climates avgClimate)
         {
             float climatesSum = 0;
-            Climates warmestClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Min();
-            Climates coldestClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Max();
+            coldestNeighborClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Max();
+            warmestNeighborClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Min();
             
-            avgClimate = Climates.Temperate;
-
             
             // Create a list to store the relevant terrain generation rules in.
             List<TerrainGenRule> tileGenRules = new List<TerrainGenRule>();
@@ -349,21 +390,17 @@ namespace HexTerrainPrototype
             List<Vector3Int> generatedNeighbors = GetAllGeneratedNeighborTiles(tilePos);
             //Debug.Log("GENERATED NEIGHBORS COUNT: " + generatedNeighbors.Count);
             
+            // Get the climate limits of the neighors we just found.
+            GetClimateLimits(generatedNeighbors, out coldestNeighborClimate, out warmestNeighborClimate, out avgClimate);
+            
+            
             // For each of those already existing neighbor tiles, apply its terrain generation rules to the tile type weights lookup.
             foreach (Vector3Int neighborPos in generatedNeighbors)
             {
                 // Get the tile at this position from the tile map.
                 HexTile neighborTile = (HexTile) _HexTileMap.GetTile(neighborPos);
-                
-                // Add the climate value to a running total. This will be turned into the average climate of the neighboring tiles, which we will use for rules that have no climate value.
-                Climates neighborClimate = neighborTile.TileTypeData.Climate;
-                if (neighborClimate > warmestClimate)
-                    warmestClimate = neighborClimate;
-                if (neighborClimate < coldestClimate)
-                    coldestClimate = neighborClimate;
-                climatesSum += (float) neighborClimate;
-                
-                
+
+                /*
                 if (neighborTile == null)
                     Debug.LogError($"{neighborPos}    neighborTile==NULL");
                 else if (neighborTile.TileTypeData == null)
@@ -372,13 +409,12 @@ namespace HexTerrainPrototype
                     Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData.NeighborGenerationRules==NULL");
                 else if (neighborTile.TileTypeData.NeighborGenerationRules.Count == 0)
                     Debug.LogError($"{neighborPos}    neighborTile.TerrainTypeData.NeighborGenerationRules.Count==0");
-                
+                */
                 
                 // Iterate through each of its terrain generation rules for neighboring tiles.
                 foreach (TerrainGenRule rule in neighborTile.TileTypeData.NeighborGenerationRules)
                 {
-                    
-                    // Check if this rule already exists the rules list we're building for the tile we're generating.
+                    // Check if this rule already exists in the rules list we're building for the tile we're generating.
                     bool foundMatch = false;
                     for (int i = 0; i < tileGenRules.Count; i++)
                     {
@@ -400,9 +436,18 @@ namespace HexTerrainPrototype
                         
                     } // end for i
 
+                    // If not match was found, then we may be able to add this rule to the list.
                     if (!foundMatch)
                     {
-                        tileGenRules.Add(new TerrainGenRule(rule));
+                        rule.DEBUG_PrintRule();
+                        // If this rule is arid, but there is a snowy neighboring tile, or this rule is snowy but there is an arid neighboring tile,
+                        // then we should skip this rule, as it could result in desert and snow tiles being right next to each other.
+                        if (!(coldestNeighborClimate == Climates.Snowy && rule.Climate == Climates.Arid) &&
+                            !(warmestNeighborClimate == Climates.Arid && rule.Climate == Climates.Snowy))
+                        {
+                            tileGenRules.Add(new TerrainGenRule(rule));
+//                            rule.DEBUG_PrintRule();
+                        }
                     }
                     
                     
@@ -423,17 +468,38 @@ namespace HexTerrainPrototype
                 
             } // end for i
 
-
-            // Convert the sum of the climate values of all neighbor tiles into an average.
-            avgClimate = (Climates) Mathf.RoundToInt(climatesSum / generatedNeighbors.Count);
             
-            if (coldestClimate == Climates.Snowy)
-                avgClimate = coldestClimate;
-            else if (warmestClimate == Climates.Arid)
-                avgClimate = warmestClimate;
             
-            Debug.Log($"GENERATING TILE:    {tilePos}    ColdestNeighbor: {coldestClimate}    WarmestNeighbor: {warmestClimate}    AvgNeighbor: {avgClimate}");
+            Debug.Log($"GENERATING TILE:    {tilePos}    ColdestNeighbor: {coldestNeighborClimate}    WarmestNeighbor: {warmestNeighborClimate}    AvgNeighbor: {avgClimate}");
             return tileGenRules;
+        }
+
+        private void GetClimateLimits(List<Vector3Int> tilesToCheck, out Climates coldestNeighborClimate, out Climates warmestNeighborClimate, out Climates avgClimate)
+        {
+            coldestNeighborClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Max();
+            warmestNeighborClimate = (Climates) Enum.GetValues(typeof(Climates)).Cast<int>().Min();
+            
+            // Check the climate of every tile in the list.
+            foreach (Vector3Int tilePos in tilesToCheck)
+            {
+                // Get the tile at this position from the tile map.
+                HexTile neighborTile = (HexTile)_HexTileMap.GetTile(tilePos);
+
+                // Add the climate value to a running total. This will be turned into the average climate of the neighboring tiles, which we will use for rules that have no climate value.
+                Climates curTileClimate = neighborTile.TileTypeData.Climate;
+                
+                // If the climate is set to None for some reason, just ignore it.
+                if (curTileClimate != Climates.None)
+                {
+                    if (curTileClimate < coldestNeighborClimate)
+                        coldestNeighborClimate = curTileClimate;
+                    if (curTileClimate > warmestNeighborClimate)
+                        warmestNeighborClimate = curTileClimate;
+                }
+                
+            } // end foreach tile
+
+            avgClimate = (Climates) Mathf.RoundToInt(((int) coldestNeighborClimate + (int) coldestNeighborClimate) / 2f);
         }
         
         private void InitializeTerrainGeneration()
@@ -472,9 +538,8 @@ namespace HexTerrainPrototype
                                                                            Mathf.Clamp(_FirstTileYPos, 0, _HexTileMapHeight - 1),
                                                                            0);
             }
-            else
+            else // _CenterMapOnOrigin is off, so the origin cell will be at the lower-left corner of the map rather than in the center.
             {
-                // _CenterMapOnOrigin is off, so the origin cell will be at the lower-left corner of the map rather than in the center.
                 _HexMapBounds = new Rect(0, 0, _HexTileMapWidth, _HexTileMapHeight);
                 
                 // Determine the starting tile position.

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using HexTerrainPrototype.Data;
+using Unity.VisualScripting;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -79,23 +80,20 @@ namespace HexTerrainPrototype
         /// <returns>A random tile of the specified climate, terrain type, or both.</returns>
         public static TileTypeDataSO GetRandomTileOfType(Climates climate, TerrainTypes terrainType)
         {
-            if (climate == Climates.None && terrainType == TerrainTypes.None)
-                throw new ArgumentException("Both arguments are set to \"None\", so there are no tiles from which to select at random!");
-                                            
             List<TileTypeDataSO> tileTypes = new List<TileTypeDataSO>();
-            tileTypes.AddRange(_TileTypesByClimateLookup[climate]);
-            tileTypes.AddRange(_TileTypesByTerrainTypeLookup[terrainType]);
-            
-            if (climate == Climates.Arid || climate == Climates.Snowy)
-                tileTypes.AddRange(_TileTypesByClimateLookup[Climates.Temperate]);
-            
-            if (climate == Climates.Temperate)
+
+            if (climate == Climates.None && terrainType == TerrainTypes.None)
             {
-                tileTypes.AddRange(_TileTypesByClimateLookup[Climates.Arid]);
-                tileTypes.AddRange(_TileTypesByClimateLookup[Climates.Snowy]);
+                // This one is using AddRange() on purpose since there can't be any duplicates in this case anyway. So the extra check is not needed.
+                tileTypes.AddRange(_AllTileTypesByNameLookup);
+            }
+            else
+            {
+                tileTypes.AddRange(_TileTypesByClimateLookup[climate]);
             }
 
-            // AVOID DUPLICATE ENMTRIES IN tileTypes!!!
+
+            return tileTypes[Random.Range(0, tileTypes.Count - 1)];
             
             int attempts = 0;
             while (true)

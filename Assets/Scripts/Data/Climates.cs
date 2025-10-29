@@ -10,7 +10,6 @@ namespace HexTerrainPrototype.Data
         None = 0, // This is just used as a default value when a climate isn't selected yet.
         Snowy,
         Temperate,
-        Tropical,
         Arid,
     }
 }

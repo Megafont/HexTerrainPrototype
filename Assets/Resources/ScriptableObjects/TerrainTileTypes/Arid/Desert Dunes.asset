@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
   m_Name: Desert Dunes
   m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
-  Climate: 4
+  Climate: 3
   TerrainType: 3
   TileVisuals:
   - {fileID: 11400000, guid: 0c2ad6c93ff5d714e8fe0116b30767bb, type: 2}
@@ -23,8 +23,8 @@ MonoBehaviour:
   TileVisualIndex: -1
   NeighborGenerationRules:
   - Climate: 0
-    TerrainType: 10
+    TerrainType: 3
     Probability: 0.25
-  - Climate: 4
+  - Climate: 3
     TerrainType: 0
     Probability: 0.25

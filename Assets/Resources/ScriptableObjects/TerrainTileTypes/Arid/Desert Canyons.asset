@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cd2c340d635a394f96d81c561092231, type: 3}
   m_Name: Desert Canyons
   m_EditorClassIdentifier: Assembly-CSharp::HexTerrainPrototype.Data.TileTypeData
-  Climate: 4
+  Climate: 3
   TerrainType: 1
   TileVisuals:
   - {fileID: 11400000, guid: 421bdd43699ecc34194ab4a5e9aff93c, type: 2}
@@ -25,6 +25,6 @@ MonoBehaviour:
   - Climate: 0
     TerrainType: 8
     Probability: 0.4
-  - Climate: 4
+  - Climate: 3
     TerrainType: 0
     Probability: 0.25
